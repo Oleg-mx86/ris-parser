@@ -2,52 +2,91 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Simple PyScript App</title>
+    <title>Конвертація RIS у бібліографічний опис</title>
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 15px;
+        }
+        #output-text {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-left: 3px solid #007acc;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Simple PyScript App</h1>
-    <textarea id="input-text">Enter some text</textarea>
-    <button py-click="display_text">Run</button>
-    <p id="output-text">text</p>
+    <h1>Конвертер бібліографічного опису з формату RIS</h1>
+
+    <textarea id="input-text" placeholder="Вставте сюди RIS-текст..."></textarea>
+    <br>
+    <button py-click="display_text">Сформувати опис</button>
+
+    <p><strong>Результат:</strong></p>
+    <div id="output-text">Очікується введення даних...</div>
 
     <script type="py">
-def f(au):
-    r=au.split(", ")
-    if len(r)==2:
-        return r[0]+" "+r[1][0]+"."
-    if len(r)==1:
-        return r[0]
+from pyscript import document
+
+def format_author(au):
+    r = au.split(", ")
+    if len(r) == 2:
+        return f"{r[0]} {r[1][0]}."
+    return au
 
 def convert(ris_text):
-    title=""
-    volume=""
-    AU=[]
-    for i in ris_text.splitlines(True):
-        r=i.split("  - ")
-        # print(r[0], r[1])
-        if r[0]=="T1":
-            title=r[1][0:-1]
-        if r[0]=="JO":
-            journal=r[1][0:-1]
-        if r[0]=="PY":
-            year=r[1][0:-1]
-        if r[0]=="VL":
-            volume=r[1][0:-1]
-        if r[0]=="SP":
-            sp=r[1][0:-1]
-        if r[0]=="DO":
-            doi=r[1][0:-1]
-        if r[0]=="AU":
-            au=r[1][0:-1]
-            AU.append(f(au))
-    return "%s %s. // %s. %s. %s. %s. DOI: %s"%(", ".join(AU), title, journal, year, volume, sp, doi)
-    
-from pyscript import document
+    title = ""
+    journal = ""
+    year = ""
+    volume = ""
+    sp = ""
+    doi = ""
+    AU = []
+
+    for line in ris_text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("  - ")
+        if len(parts) < 2:
+            continue
+        tag, content = parts[0], parts[1].strip()
+        if tag == "T1":
+            title = content
+        elif tag == "JO":
+            journal = content
+        elif tag == "PY":
+            year = content
+        elif tag == "VL":
+            volume = content
+        elif tag == "SP":
+            sp = content
+        elif tag == "DO":
+            doi = content
+        elif tag == "AU":
+            AU.append(format_author(content))
+
+    authors = ", ".join(AU) if AU else "Автор(и) не вказані"
+    result = f"{authors}. {title} // {journal}. {year}. Т. {volume}. С. {sp}."
+    if doi:
+        result += f" DOI: {doi}"
+    return result
+
 def display_text(*args):
     input_text = document.getElementById("input-text").value
     output = document.getElementById("output-text")
-    output.innerText = convert(input_text)
+    if input_text.strip() == "":
+        output.innerText = "Введіть текст у форматі RIS!"
+    else:
+        output.innerText = convert(input_text)
     </script>
 </body>
 </html>
